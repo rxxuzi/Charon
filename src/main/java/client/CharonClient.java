@@ -1,20 +1,24 @@
 package client;
 
-import java.io.IOException;
-import java.net.Socket;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.util.UUID; // UUIDライブラリのインポート
+import java.net.Socket;
+import java.util.Scanner;
 
 public class CharonClient {
     private static final String HOST = "localhost";
     private static final int PORT = 12345;
+    private static final String ID = "user";
 
     public static void main(String[] args) {
-        // クライアントIDをUUIDで生成
-//        String clientId = UUID.randomUUID().toString();
-        String clientId = "test";
+        String clientId = "user";
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Enter client ID : ");
+        if (sc.hasNextLine()) {
+            clientId = sc.nextLine();
+        }
         System.out.println("Client ID: " + clientId);
 
         try (Socket socket = new Socket(HOST, PORT);
@@ -22,29 +26,38 @@ public class CharonClient {
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in))) {
 
-            // サーバーにクライアントIDを送信
             out.println(clientId);
 
-            String fromServer;
+            new Thread(() -> {
+                try {
+                    String fromServer;
+                    while ((fromServer = in.readLine()) != null) {
+                        System.out.println("Server: " + fromServer);
+                        if (fromServer.equals(Messages.KICKED_OUT) || fromServer.equals(Messages.SERVER_SHUTDOWN)) {
+                            System.out.println(Messages.DISCONNECTED);
+                            System.exit(1);
+                        }
+
+                    }
+                } catch (IOException e) {
+                    System.out.println("Error reading from server: " + e.getMessage());
+                }
+            }).start();
+
             String fromUser;
-
-            while ((fromServer = in.readLine()) != null) {
-                System.out.println("Server: " + fromServer);
-                if (fromServer.equals("bye")) {
-                    break;
+            while ((fromUser = stdIn.readLine()) != null && !socket.isClosed()) {
+                if (fromUser.equalsIgnoreCase("/exit")) {
+                    System.out.println("Exiting...");
+                    break; // /exit コマンドが入力された場合、ループを抜ける
                 }
-
-                fromUser = stdIn.readLine();
-                if (fromUser != null) {
-                    System.out.println("Client: " + fromUser);
-                    out.println(fromUser);
-                }
+                out.println(fromUser);
             }
+            // ソケットを閉じる
         } catch (IOException e) {
-            System.out.println("Exception caught when trying to connect to "
-                    + HOST + " on port " + PORT);
+            System.out.println("Exception caught when trying to connect to " + HOST + " on port " + PORT);
             System.out.println(e.getMessage());
         }
     }
 }
+
 
