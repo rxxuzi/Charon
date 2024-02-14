@@ -6,9 +6,10 @@ import java.io.PrintWriter;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
+import static server.SvrMessage.*;
 import static server.CharonServer.clientMap;
 
-public class SvrCommand {
+public final class SvrCommand {
     public static void execute(String commandLine) {
         String[] parts = commandLine.split(" ", 3);
         switch (parts[0]) {
@@ -26,13 +27,12 @@ public class SvrCommand {
     }
 
     private static void unknown(String[] parts) {
-        System.out.println("Unknown command: " + parts[0]);
-        System.out.println("Type /help for help.");
+        warning("Unknown command: " + parts[0] + " Type /help for help.");
     }
 
     private static void send(String[] parts) {
         if (clientMap.isEmpty()){
-            System.out.println("No clients connected.");
+            warning("No clients connected.");
             return;
         }
         if (parts.length >= 3) {
@@ -40,7 +40,7 @@ public class SvrCommand {
                 // 全クライアントにメッセージを送信
                 String messageToSend = parts[2];
                 for (PrintWriter writer : clientMap.values()) {
-                    writer.println("Message to all: " + messageToSend);
+                    writer.println(messageToSend);
                 }
                 CharonServer.msgList.add("server [a] : " + messageToSend);
             } else if (parts[1].equals("-r")) {
@@ -53,7 +53,7 @@ public class SvrCommand {
                     if (i == randomIndex) {
                         PrintWriter targetOut = clientMap.get(clientId);
                         if (targetOut != null) {
-                            targetOut.println("Message to random: " + messageToSend);
+                            targetOut.println(messageToSend);
                         }
                         break;
                     }
@@ -66,9 +66,9 @@ public class SvrCommand {
                 String messageToSend = parts[2];
                 PrintWriter targetOut = clientMap.get(targetClientId);
                 if (targetOut != null) {
-                    targetOut.println("Message: " + messageToSend);
+                    targetOut.println(messageToSend);
                 } else {
-                    System.out.println("Client ID " + targetClientId + " not found.");
+                    warning("Client ID " + targetClientId + " not found.");
                 }
                 CharonServer.msgList.add("server ["+targetClientId+"] : " + messageToSend);
             }
@@ -99,7 +99,8 @@ public class SvrCommand {
     private static void kill() {
         // プロセスの終了
         CharonServer.isRunning = false;
-        System.out.println("Server is shutting down...");
+        important("Server is shutting down...");
+
         try {
             for (PrintWriter writer : clientMap.values()) {
                 writer.println(CltMessages.SERVER_SHUTDOWN);
@@ -110,6 +111,7 @@ public class SvrCommand {
         } catch (Exception e) {
             System.out.println("Error while shutting down: " + e.getMessage());
         }
+
         System.exit(0); // プログラムを終了
     }
 

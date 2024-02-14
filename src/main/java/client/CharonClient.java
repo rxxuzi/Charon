@@ -1,19 +1,22 @@
 package client;
 
+import static client.CltMessages.*;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
+import java.util.UUID;
 
 public class CharonClient {
     private static final String HOST = "localhost";
     private static final int PORT = 12345;
-    private static final String ID = "user";
 
     public static void main(String[] args) {
-        String clientId = "user";
+        String clientId = UUID.randomUUID().toString();
         Scanner sc = new Scanner(System.in);
         System.out.print("Enter client ID : ");
         if (sc.hasNextLine()) {
@@ -32,30 +35,30 @@ public class CharonClient {
                 try {
                     String fromServer;
                     while ((fromServer = in.readLine()) != null) {
-                        System.out.println("Server: " + fromServer);
-                        if (fromServer.equals(Messages.KICKED_OUT) || fromServer.equals(Messages.SERVER_SHUTDOWN)) {
-                            System.out.println(Messages.DISCONNECTED);
+                        notice("Server: " + fromServer);
+                        if (fromServer.equals(CltMessages.KICKED_OUT) || fromServer.equals(CltMessages.SERVER_SHUTDOWN)) {
+                            important(CltMessages.DISCONNECTED);
                             System.exit(1);
                         }
 
                     }
                 } catch (IOException e) {
-                    System.out.println("Error reading from server: " + e.getMessage());
+                    important("Error reading from server: " + e.getMessage());
                 }
             }).start();
 
             String fromUser;
             while ((fromUser = stdIn.readLine()) != null && !socket.isClosed()) {
                 if (fromUser.equalsIgnoreCase("/exit")) {
-                    System.out.println("Exiting...");
+                    success(EXITING);
+                    System.exit(0);
                     break; // /exit コマンドが入力された場合、ループを抜ける
                 }
                 out.println(fromUser);
             }
             // ソケットを閉じる
         } catch (IOException e) {
-            System.out.println("Exception caught when trying to connect to " + HOST + " on port " + PORT);
-            System.out.println(e.getMessage());
+            important("Exception caught when trying to connect to " + HOST + " on port " + PORT + "\n" + e.getMessage());
         }
     }
 }

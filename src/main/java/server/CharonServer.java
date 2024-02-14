@@ -9,16 +9,25 @@ import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static server.SvrMessage.*;
+
 public class CharonServer {
     public static final int PORT = 12345;
     public static boolean isRunning = true;
+    // 接続しているクライアントのマップ
     public static final Map<String, PrintWriter> clientMap = new HashMap<>();
+    // ミュートしているクライアントのマップ
     public static Map<String, Boolean> muteMap = new ConcurrentHashMap<>();
+    // クライアントの権限レベルを保持するマップ
+    public static Map<String, Integer> permissionMap = new ConcurrentHashMap<>();
 
     public static ServerSocket svrSocket;
     public static final long serverStartTime = System.currentTimeMillis();
 
-    public static final List<String> msgList = new ArrayList<>();
+    public static final List<String> msgList = new ArrayList<>(); // メッセージの履歴
+    public static final List<String> cmdList = new ArrayList<>(); // コマンド履歴
+    public static final List<String> muteMsgList = new ArrayList<>(); //　ミュートされているメッセージの履歴
+
 
     public static void main(String[] args) throws Exception {
         System.out.println("Server is running on port " + PORT + "...");
@@ -77,23 +86,22 @@ public class CharonServer {
 
                 clientId = in.readLine();
                 clientMap.put(clientId, out);
-                System.out.println("Client ID: " + clientId + " has connected.");
+                success("Client ID: " + clientId + " has connected.");
 
                 String inputLine;
                 while ((inputLine = in.readLine()) != null && isRunning) {
                     Boolean isMuted = CharonServer.muteMap.getOrDefault(clientId, false);
                     if (!isMuted) {
-                        System.out.println("Received from " + clientId + ": " + inputLine);
+                        notice(clientId + ": " + inputLine);
                         msgList.add(clientId + " : " + inputLine);
                     } else {
-                        //　ミュートしたアカウントの処理
-//                        System.out.println("Muted message from " + clientId + ": " + inputLine);
+                        muteMsgList.add(clientId + " : " + inputLine);
                     }
 
                 }
             } catch (IOException e) {
                 if (isRunning) {
-                    System.out.println("Exception in ClientHandler for client " + clientId + ": " + e.getMessage());
+                    warning("Exception in ClientHandler for client " + clientId + ": " + e.getMessage());
                 }
             } finally {
                 try {
