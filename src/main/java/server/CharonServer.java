@@ -1,22 +1,24 @@
 package server;
 
-import client.Messages;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CharonServer {
     public static final int PORT = 12345;
     public static boolean isRunning = true;
     public static final Map<String, PrintWriter> clientMap = new HashMap<>();
-    public static ServerSocket serverSocket;
+    public static Map<String, Boolean> muteMap = new ConcurrentHashMap<>();
+
+    public static ServerSocket svrSocket;
+    public static final long serverStartTime = System.currentTimeMillis();
+
+    public static final List<String> msgList = new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
         System.out.println("Server is running on port " + PORT + "...");
@@ -34,89 +36,27 @@ public class CharonServer {
             }
         }).start();
 
-        serverSocket = new ServerSocket(PORT);
+        svrSocket = new ServerSocket(PORT);
 
         try {
             while (isRunning) {
-                Socket clientSocket = serverSocket.accept(); // This doesn't need to be in the try-with-resources
+                Socket clientSocket = svrSocket.accept(); // This doesn't need to be in the try-with-resources
                 new ClientHandler(clientSocket).start(); // Start a new thread for each client
             }
-            serverSocket.close(); // サーバーソケットを閉じる
+            svrSocket.close(); // サーバーソケットを閉じる
             System.exit(0); // プログラムを終了
         } catch (IOException e) {
             System.out.println("Exception caught when trying to listen on port " + PORT + " or listening for a connection");
             System.out.println(e.getMessage());
         } finally {
-            serverSocket.close();
+            svrSocket.close();
         }
         System.exit(0); // プログラムを終了
     }
 
     private static void processCommand(String commandLine) {
-        if (commandLine.startsWith("/send")) {
-            // /send コマンドの処理
-            String[] parts = commandLine.split(" ", 3);
-            if (parts.length >= 3) {
-                if (parts[1].equals("-a")) {
-                    // 全クライアントにメッセージを送信
-                    String messageToSend = parts[2];
-                    for (PrintWriter writer : clientMap.values()) {
-                        writer.println("Message to all: " + messageToSend);
-                    }
-                } else {
-                    // 特定のクライアントにメッセージを送信
-                    String targetClientId = parts[1];
-                    String messageToSend = parts[2];
-                    PrintWriter targetOut = clientMap.get(targetClientId);
-                    if (targetOut != null) {
-                        targetOut.println("Message: " + messageToSend);
-                    } else {
-                        System.out.println("Client ID " + targetClientId + " not found.");
-                    }
-                }
-            }
-        } else if (commandLine.startsWith("/kick")) {
-            String[] parts = commandLine.split(" ");
-            if (parts.length == 2) {
-                String targetId = parts[1];
-                if (clientMap.containsKey(targetId)) {
-                    PrintWriter targetOut = clientMap.get(targetId);
-                    if (targetOut != null) {
-                        targetOut.println(Messages.KICKED_OUT);
-                        targetOut.close(); // ターゲットの出力ストリームを閉じる
-                    }
-                    clientMap.remove(targetId); // ターゲットをクライアントマップから削除
-                    System.out.println("Client ID " + targetId + " has been kicked out.");
-                } else {
-                    System.out.println("Client ID " + targetId + " not found.");
-                }
-            }
-        } else if (commandLine.equals("/kill")) {
-            System.out.println("Server is shutting down...");
-            isRunning = false;
-            try {
-                for (PrintWriter writer : clientMap.values()) {
-                    writer.println(Messages.SERVER_SHUTDOWN);
-                    writer.close();
-                }
-                clientMap.clear();   // クライアントマップを空にする
-                serverSocket.close(); // サーバーソケットを閉じる
-            } catch (Exception e) {
-                System.out.println("Error while shutting down: " + e.getMessage());
-            }
-            System.exit(0); // プログラムを終了
-        } else if (commandLine.equals("/view")) {
-            // 接続しているクライアントのIDを表示
-            for(int i = 0; i < clientMap.size(); i++) {
-                System.out.println("Connected Client ID: " + clientMap.keySet());
-            }
-        } else if (commandLine.equals("/help")) {
-            System.out.println("Available commands:");
-            System.out.println("/send -a <message> - Send a message to all clients");
-            System.out.println("/send <client-id> <message> - Send a message to a specific client");
-            System.out.println("/kick <client-id> - Kick a client out of the server");
-            System.out.println("/view - View connected clients");
-            System.out.println("/kill - Shutdown the server");
+        if(commandLine.startsWith("/")){
+            SvrCommand.execute(commandLine);
         }
     }
 
@@ -141,10 +81,18 @@ public class CharonServer {
 
                 String inputLine;
                 while ((inputLine = in.readLine()) != null && isRunning) {
-                    System.out.println("Received from " + clientId + ": " + inputLine);
+                    Boolean isMuted = CharonServer.muteMap.getOrDefault(clientId, false);
+                    if (!isMuted) {
+                        System.out.println("Received from " + clientId + ": " + inputLine);
+                        msgList.add(clientId + " : " + inputLine);
+                    } else {
+                        //　ミュートしたアカウントの処理
+//                        System.out.println("Muted message from " + clientId + ": " + inputLine);
+                    }
+
                 }
             } catch (IOException e) {
-                if (isRunning) { // isRunning が true の場合のみエラーメッセージを表示
+                if (isRunning) {
                     System.out.println("Exception in ClientHandler for client " + clientId + ": " + e.getMessage());
                 }
             } finally {
@@ -152,9 +100,7 @@ public class CharonServer {
                     if (out != null) out.close();
                     if (in != null) in.close();
                     clientSocket.close();
-                } catch (IOException e) {
-                    // ソケットクローズ時の例外は通常無視しても安全
-                }
+                } catch (IOException ignored) {}
                 clientMap.remove(clientId);
             }
         }
