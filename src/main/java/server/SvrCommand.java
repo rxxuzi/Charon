@@ -134,23 +134,7 @@ public final class SvrCommand {
     }
 
     private static void help() {
-        System.out.println("Available commands:");
-        System.out.println("/send -a <message> - Send a message to all clients");
-        System.out.println("/send -r <message> - Send a message to a random client");
-        System.out.println("/send <client-id> <message> - Send a message to a specific client");
-        System.out.println("/kick <client-id> - Kick a client out of the server");
-        System.out.println("/list - View connected clients");
-        System.out.println("/help - Display this help message");
-        System.out.println("/stats - Display server statistics");
-        System.out.println("/mute <client-id> - Mute a client");
-        System.out.println("/mute -a - Mute all clients");
-        System.out.println("/unmute <client-id> - Unmute a client");
-        System.out.println("/unmute -a - Unmute all clients");
-        System.out.println("/log - View the message log");
-        System.out.println("/log [--msg|--cmd|--mute|--chat] - View message, command, mute, or chat logs respectively");
-        System.out.println("/log [--msg|--mute] <client-id> - View messages or mute log for a specific client");
-        System.out.println("/kill - Shutdown the server");
-        System.out.println("/give <client-id> [0~3] - Give clients access privileges from 0~3");
+        System.out.println(CMD_HELP);
     }
 
     public static void stats() {
