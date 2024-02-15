@@ -1,6 +1,7 @@
 package server;
 
 import data.Chat;
+import net.Network;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -47,7 +48,7 @@ public class CharonServer {
             }
         }).start();
 
-        svrSocket = new ServerSocket(PORT);
+        svrSocket = new Network(PORT).createLocalhostServerSocket();
 
         try {
             while (isRunning) {
