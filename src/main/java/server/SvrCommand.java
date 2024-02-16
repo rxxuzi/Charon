@@ -130,7 +130,11 @@ public final class SvrCommand {
 
     private static void list() {
         // 接続しているクライアントのIDを表示
-        System.out.println("Connected Client ID: " + clientMap.keySet());
+        if (clientMap.isEmpty()){
+            warning("No clients connected.");
+        } else {
+            System.out.println("Connected Client ID: " + clientMap.keySet());
+        }
     }
 
     private static void help() {
