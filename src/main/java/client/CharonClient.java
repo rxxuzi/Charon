@@ -21,16 +21,18 @@ public class CharonClient {
     public static int level = 1;
     public static long joinTime;
     public static Socket socket;
+    private static String clientId;
+    private static final Gson gson = new Gson();
+
     public static void main(String[] args) throws IOException {
-        Gson gson = new Gson();
-        String clientId = UUID.randomUUID().toString();
+        clientId = UUID.randomUUID().toString();
         Scanner sc = new Scanner(System.in);
         System.out.print("Enter client ID : ");
         if (sc.hasNextLine()) {
             clientId = sc.nextLine();
         }
-        System.out.println("Client ID: " + clientId);
 
+        System.out.println("Client ID: " + clientId);
         socket = new Network(PORT).createSocket(HOST);
 
         try (PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -46,10 +48,10 @@ public class CharonClient {
                     String fromServer;
                     while ((fromServer = in.readLine()) != null) {
                         if (fromServer.startsWith("levelUpdate:")) {
-                            level = Integer.parseInt(fromServer.split(":")[1]);
-                            System.out.println("Your access level has been updated to: " + level);
+                            level = CltMessages.updateAccessLevel(fromServer);
                             continue;
                         }
+
                         notice(fromServer); // サーバーからの受信
 
                         if (fromServer.equals(CltMessages.KICKED_OUT) || fromServer.equals(CltMessages.SERVER_SHUTDOWN)) {
@@ -64,35 +66,11 @@ public class CharonClient {
 
             String fromUser;
             while ((fromUser = stdIn.readLine()) != null && !socket.isClosed()) {
-                if(fromUser.startsWith("/")){
-                    if (fromUser.equalsIgnoreCase("/exit")) {
-                        success(EXITING);
-                        System.exit(0);
-                    } else if (fromUser.equalsIgnoreCase("/level")) {
-                        System.out.println("Your current access level is: " + level);
-                    } else if (fromUser.startsWith("/say")) {
-                        if(level >= 1){
-                            String[] command = fromUser.split(" ", 3);
-                            if (command.length == 3) {
-                                String to = command[1];
-                                String message = command[2];
-                                // Chat インスタンスを作成
-                                Chat chat = new Chat(clientId, to, message);
-                                // Chat インスタンスを JSON 文字列に変換
-                                String chatJson = gson.toJson(chat);
-                                out.println("$" + chatJson); // $ をつけてメッセージを送信するとJson形式の文字列という意味となる
-                            } else {
-                                System.out.println("Usage: /say <Client-Id> <message>");
-                            }
-                        } else {
-                            warning("You do not have permission to use this command.");
-                        }
-                    } else if (fromUser.startsWith("/list")){
-                        out.println("!list"); // サーバーに !list コマンドを送信
-                    } else {
-                        System.out.println("Invalid command. Please try again.");
-                    }
-                }else{
+                if (fromUser.startsWith("@")){
+                    chat(fromUser, out);
+                } else if (fromUser.startsWith("/")){
+                    processCommand(fromUser, out);
+                } else {
                     out.println(fromUser);
                 }
             }
@@ -100,6 +78,48 @@ public class CharonClient {
             important("Exception caught when trying to connect to " + HOST + " on port " + PORT + "\n" + e.getMessage());
         } finally {
             socket.close();
+        }
+    }
+
+    private static void chat(String cmd, PrintWriter out){
+        String[] command = cmd.split(" ", 2);
+        if (command.length == 2) {
+            String to = command[0].substring(1);
+            String message = command[1];
+            Chat chat = new Chat(clientId, to, message);
+            String chatJson = gson.toJson(chat);
+            out.println("$" + chatJson);
+        } else {
+            System.out.println("Usage: @<Client-Id> <message>");
+        }
+    }
+
+    public static void processCommand(String commandLine, PrintWriter out) {
+        String[] cmd = commandLine.split(" ", 3);
+        if (cmd[0].equals("/exit")) {
+            success(EXITING);
+            System.exit(0);
+        } else if (cmd[0].equals("/level")) {
+            System.out.println("Your current access level is: " + level);
+        } else if (cmd[0].equals("/say")) {
+            if(level >= 1){
+                String[] cmdx = commandLine.split(" ", 3);
+                if (cmdx.length == 3) {
+                    String to = cmdx[1];
+                    String message = cmdx[2];
+                    Chat chat = new Chat(clientId, to, message);
+                    String chatJson = gson.toJson(chat);
+                    out.println("$" + chatJson); // $ をつけてメッセージを送信するとJson形式の文字列という意味となる
+                } else {
+                    System.out.println("Usage: /say <Client-Id> <message>");
+                }
+            } else {
+                warning("You do not have permission to use this command.");
+            }
+        } else if (cmd[0].equals("/list")){
+            out.println("!list"); // サーバーに !list コマンドを送信
+        } else {
+            System.out.println("Invalid command. Please try again.");
         }
     }
 }
