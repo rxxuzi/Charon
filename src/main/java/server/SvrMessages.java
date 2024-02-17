@@ -2,13 +2,14 @@ package server;
 
 import global.Message;
 
-public class SvrMessage extends Message {
+public class SvrMessages extends Message {
     public static final String CMD_HELP = """
             Available commands:
             /help - Display this help message
-            /send -a <message> - Send a message to all clients
-            /send -r <message> - Send a message to a random client
-            /send <client-id> <message> - Send a message to a specific client
+            /send <client-id> <file-path> - Send a file to a specific client
+            /say -a <message> - Send a message to all clients
+            /say -r <message> - Send a message to a random client
+            /say <client-id> <message> - Send a message to a specific client
             /kick <client-id> - Kick a client out of the server
             /kick -a - Kick all clients out of the server
             /list - View connected clients

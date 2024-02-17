@@ -1,24 +1,24 @@
 package server;
 
 import data.Chat;
+import global.Fast;
 import net.Network;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static server.SvrMessage.*;
+import static server.SvrMessages.*;
 
 public class CharonServer {
     public static final int PORT = 12345;
     public static boolean isRunning = true;
     // 接続しているクライアントのマップ
     public static final Map<String, PrintWriter> clientMap = new ConcurrentHashMap<>();
+    // クライアントのストリームのマップ
+    public static final Map<String, OutputStream> streamMap = new ConcurrentHashMap<>();
     // ミュートしているクライアントのマップ
     public static final Map<String, Boolean> muteMap = new ConcurrentHashMap<>();
     // クライアントの権限レベルを保持するマップ
@@ -76,6 +76,7 @@ public class CharonServer {
         private final Socket clientSocket;
         private PrintWriter out;
         private BufferedReader in;
+        private OutputStream os;
         private String clientId;
 
         public ClientHandler(Socket socket) {
@@ -86,42 +87,45 @@ public class CharonServer {
             try {
                 out = new PrintWriter(clientSocket.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                os = clientSocket.getOutputStream();
 
                 clientId = in.readLine();
-                clientMap.put(clientId, out);
+
+                clientMap.put(clientId, out); // メッセージ用のストリーム
+                streamMap.put(clientId, os);  // ファイル送信用のストリーム
 
                 permissionMap.put(clientId, 1);
 
                 success("Client ID: " + clientId + " has connected.");
 
-                String inputLine;
+                String line;
                 MessageProcessor processor = new MessageProcessor(); // MessageProcessor のインスタンスを作成
 
-                while ((inputLine = in.readLine()) != null && isRunning) {
-                    /*
-                        先頭に$が付いていたらJson形式のストリーム
-                        先頭に!が付いていたらコマンド
-                     */
-                    if (inputLine.startsWith("$")) {
-                        // MessageProcessor を使用してメッセージを処理 (sayコマンド)
-                        processor.sendJson(inputLine, clientMap);
-                    } else if  (inputLine.startsWith("!")) {
-                        String commandLine = inputLine.substring(1); // 先頭の ! を取り除く
-                        String[] cmd = commandLine.split(" ", 3);
+                while ((line = in.readLine()) != null && isRunning) {
+                    String type = line.split(":")[0];
+                    line = line.substring(type.length() + 1);
+                    type += ":";
+
+                    if(type.equals(Fast.st[0])){
+                        Boolean isMuted = CharonServer.muteMap.getOrDefault(clientId, false);
+                        if (!isMuted) {
+                            // 通常のテキストメッセージの処理
+                            notice(clientId + ": " + line);
+                            msgList.add(clientId + ": " + line);
+                        } else {
+                            muteMsgList.add(clientId + ": " + line);
+                        }
+                    } else if (type.equals(Fast.st[1])){
+                        String[] cmd = line.split(" ", 3);
                         if (cmd[0].equals("/list")) {
                             processor.showList(out, clientMap);
                         }
                         processor.showList(out, clientMap);
-                    } else {
-                        Boolean isMuted = CharonServer.muteMap.getOrDefault(clientId, false);
-                        if (!isMuted) {
-                            // 通常のテキストメッセージの処理
-                            notice(clientId + ": " + inputLine);
-                            msgList.add(clientId + ": " + inputLine);
-                        } else {
-                            muteMsgList.add(clientId + ": " + inputLine);
-                        }
+                    } else if (type.equals(Fast.st[2])){
+                        // MessageProcessor を使用してメッセージを処理 (sayコマンド)
+                        processor.sendJson(line, clientMap);
                     }
+
                 }
                 // readLine() が null を返した場合、クライアントが接続を閉じたことを示す
                 info("Client " + clientId + " disconnected.");
@@ -135,7 +139,10 @@ public class CharonServer {
                     if (in != null) in.close();
                     clientSocket.close();
                 } catch (IOException ignored) {}
+
+                //　それぞれのMapからクライアントを削除する
                 clientMap.remove(clientId);
+                streamMap.remove(clientId);
                 permissionMap.remove(clientId);
             }
         }

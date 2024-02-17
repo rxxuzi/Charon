@@ -3,18 +3,19 @@ package server;
 import client.CltMessages;
 import data.Chat;
 
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import static server.SvrMessage.*;
+import static server.SvrMessages.*;
 import static server.CharonServer.clientMap;
 
 public final class SvrCommand {
     public static void execute(String commandLine) {
         String[] parts = commandLine.split(" ", 3);
         switch (parts[0]) {
-            case "/send" -> send(parts);
+            case "/send" -> send(commandLine);
+            case "/say" -> say(parts);
             case "/kick" -> kick(parts);
             case "/kill" -> kill();
             case "/list" -> list();
@@ -32,7 +33,52 @@ public final class SvrCommand {
         warning("Unknown command: " + parts[0] + " Type /help for help.");
     }
 
-    private static void send(String[] parts) {
+    /**
+     * <h2>send</h2>
+     * クライアントへファイルを送信する
+     * @see OutputStream
+     * @param commandLine {@code /send <client-id> <file-path>}
+     */
+    public static void send(String commandLine) {
+        String[] cmd = commandLine.split(" ");
+        if (cmd.length >= 3){
+            String targetClientId = cmd[1];
+            String filePath = cmd[2];
+
+            File file = new File(filePath);
+            if (file.exists() && file.isFile()) {
+                try {
+                    long fileSize = file.length();
+                    PrintWriter msg = clientMap.get(targetClientId);
+                    OutputStream os = CharonServer.streamMap.get(targetClientId);
+                    DataOutputStream dos = new DataOutputStream(os);
+                    debug("Sending file " + file.getName() + " to @" + targetClientId);
+
+                    msg.println("file:start:" + file.getName() + ":" + fileSize); //　ヘッダーを送る
+                    FileInputStream fis = new FileInputStream(file); // ファイルをストリームに変換
+                    byte[] buffer = new byte[4096];
+                    int read;
+                    while ((read = fis.read(buffer)) > 0) {
+                        dos.write(buffer, 0, read);
+                    }
+                    fis.close();
+                } catch (IOException e) {
+                    System.out.println("Error sending file: " + e.getMessage());
+                }
+            } else {
+                warning("Please enter a valid file path");
+            }
+        } else {
+            System.out.println("Usage: /send <client-id> <file-path>");
+        }
+    }
+
+    /**
+     * <h2>say</h2>
+     * クライアントへメッセージを送信する
+     * @param parts {@code /say <client-id | -a | -r> <message>}
+     */
+    private static void say(String[] parts) {
         if (clientMap.isEmpty()){
             warning("No clients connected.");
             return;
@@ -77,6 +123,11 @@ public final class SvrCommand {
         }
     }
 
+    /**
+     * <h2>kick</h2>
+     * クライアントをキックする
+     * @param parts {@code /kick <client-id | -a>}
+     */
     private static void kick(String[] parts) {
         if (clientMap.isEmpty()){
             warning("No clients connected.");
@@ -109,6 +160,12 @@ public final class SvrCommand {
 
     }
 
+    /**
+     * <h2>kill</h2>
+     * サーバーをシャットダウンする
+     * @see CharonServer#isRunning
+     *
+     */
     private static void kill() {
         // プロセスの終了
         CharonServer.isRunning = false;
@@ -128,6 +185,10 @@ public final class SvrCommand {
         System.exit(0); // プログラムを終了
     }
 
+    /**
+     * <h2>list</h2>
+     * 接続しているクライアントのIDを表示する
+     */
     private static void list() {
         // 接続しているクライアントのIDを表示
         if (clientMap.isEmpty()){
@@ -141,6 +202,12 @@ public final class SvrCommand {
         System.out.println(CMD_HELP);
     }
 
+    /**
+     * <h2>stats</h2>
+     * サーバーの状態を出力する
+     * @see #formatDuration(long)
+     * @see CharonServer#serverStartTime
+     */
     public static void stats() {
         long currentTime = System.currentTimeMillis();
         long uptimeMillis = currentTime - CharonServer.serverStartTime;
@@ -158,6 +225,11 @@ public final class SvrCommand {
         return String.format("%02d h, %02d min, %02d s", hours, minutes, seconds);
     }
 
+    /**
+     * <h2>mute</h2>
+     * クライアントからのメッセージをミュートする
+     * @param parts {@code /mute <client-id> }
+     */
     private static void mute(String[] parts) {
         if (parts.length == 2) {
             if (parts[1].equals("-a")){
@@ -177,6 +249,11 @@ public final class SvrCommand {
         }
     }
 
+    /**
+     * <h2>unmute</h2>
+     * クライアントからのメッセージをミュート解除する
+     * @param parts {@code /unmute <client-id> }
+     */
     private static void unmute(String[] parts) {
         if (parts.length == 2) {
             if (parts[1].equals("-a")){
@@ -272,6 +349,14 @@ public final class SvrCommand {
         if (clientMap.isEmpty()) {
             warning("No clients connected.");
             return;
+        }
+        if (parts.length == 2 && parts[1].equals("-x")) {
+            // クライアント全ての権限を0にする。
+            for (String clientId : CharonServer.clientMap.keySet()) {
+                CharonServer.permissionMap.put(clientId, 0);
+                System.out.println("Given permission level 0 to client ID: " + clientId);
+                CharonServer.clientMap.get(clientId).println("levelUpdate:0"); // クライアントに権限レベルの更新を通知
+            }
         }
         if (parts.length == 3) {
             String clientId = parts[1];

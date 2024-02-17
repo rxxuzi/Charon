@@ -56,7 +56,6 @@ public class Message {
         echo(0, format, args);
     }
 
-    // 緑色 - 成功や完了メッセージに使用
     public static void success(String msg) {
         echo(1, msg);
     }
@@ -69,7 +68,6 @@ public class Message {
         echo(1, format, args);
     }
 
-    // 黄色 - 警告メッセージに使用
     public static void warning(String msg) {
         echo(2, msg);
     }
@@ -82,7 +80,6 @@ public class Message {
         echo(2, format, args);
     }
 
-    // 青色 - 情報メッセージに使用
     public static void info(String msg) {
         echo(3, msg);
     }
@@ -95,9 +92,8 @@ public class Message {
         echo(3, format, args);
     }
 
-    // マゼンタ - デバッグメッセージや特別な注意が必要なメッセージに使用
     public static void debug(String msg) {
-        echo(4, msg);
+        echo(4,"dbg : " + msg);
     }
 
     public static void debug(Object... args) {
@@ -108,7 +104,6 @@ public class Message {
         echo(4, format, args);
     }
 
-    // シアン - 通知やヒントメッセージに使用
     public static void notice(String msg) {
         echo(5, msg);
     }

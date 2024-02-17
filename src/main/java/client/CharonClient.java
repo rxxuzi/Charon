@@ -2,13 +2,13 @@ package client;
 
 import com.google.gson.Gson;
 import data.Chat;
+import global.Fast;
 import net.Network;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
 
@@ -22,6 +22,7 @@ public class CharonClient {
     public static long joinTime;
     public static Socket socket;
     private static String clientId;
+    public static final List<String> cltNotes = new ArrayList<>();
     private static final Gson gson = new Gson();
 
     public static void main(String[] args) throws IOException {
@@ -32,7 +33,7 @@ public class CharonClient {
             clientId = sc.nextLine();
         }
 
-        System.out.println("Client ID: " + clientId);
+        important("Client ID: " + clientId);
         socket = new Network(PORT).createSocket(HOST);
 
         try (PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
@@ -48,14 +49,23 @@ public class CharonClient {
                     String fromServer;
                     while ((fromServer = in.readLine()) != null) {
                         if (fromServer.startsWith("levelUpdate:")) {
-                            level = CltMessages.updateAccessLevel(fromServer);
+                            level = updateAccessLevel(fromServer);
                             continue;
+                        } else if (fromServer.startsWith("file:start:")) {
+                            String[] parts = fromServer.split(":");
+                            String name = parts[2];
+                            long size = Long.parseLong(parts[3]);
+                            // ファイル受信処理を呼び出す
+                            boolean isSuccess = receiveFile(socket, name, size);
+                            if (!isSuccess) {
+                                out.println(CltMessages.FILE_RECEIVE_FAILED); // ファイル受信失敗時はサーバーに通知
+                            }
+                            continue; // ファイル受信後、次のメッセージの読み取りに戻る
+                        } else {
+                            notice(fromServer); // サーバーからの受信したメッセージを出力
                         }
-
-                        notice(fromServer); // サーバーからの受信
-
-                        if (fromServer.equals(CltMessages.KICKED_OUT) || fromServer.equals(CltMessages.SERVER_SHUTDOWN)) {
-                            important(CltMessages.DISCONNECTED);
+                        if (fromServer.equals(KICKED_OUT) || fromServer.equals(SERVER_SHUTDOWN)) {
+                            important(DISCONNECTED);
                             System.exit(1);
                         }
                     }
@@ -65,19 +75,44 @@ public class CharonClient {
             }).start();
 
             String fromUser;
+
+            // 送信
             while ((fromUser = stdIn.readLine()) != null && !socket.isClosed()) {
                 if (fromUser.startsWith("@")){
                     chat(fromUser, out);
                 } else if (fromUser.startsWith("/")){
-                    processCommand(fromUser, out);
+                    CltCommand.execute(fromUser, out);
+                } else if (fromUser.startsWith("#")){
+                    cltNotes.add(fromUser.substring(1));
                 } else {
-                    out.println(fromUser);
+                    if (!fromUser.isEmpty()) out.println(Fast.st[0] + fromUser);
                 }
             }
         } catch (IOException e) {
             important("Exception caught when trying to connect to " + HOST + " on port " + PORT + "\n" + e.getMessage());
         } finally {
             socket.close();
+        }
+    }
+
+    private static boolean receiveFile(Socket socket, String fileName , long fileSize) throws IOException {
+        try {
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            FileOutputStream fos = new FileOutputStream(fileName);
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            long totalRead = 0;
+            while (totalRead < fileSize) {
+                bytesRead = dis.read(buffer);
+                fos.write(buffer, 0, bytesRead);
+                totalRead += bytesRead;
+            }
+            fos.close();
+            success("File " + fileName + " received successfully.");
+            return true; // ファイル受信成功時はtrueを返す
+        } catch (IOException e) {
+            warning("Error receiving file: " + e.getMessage());
+            return false;
         }
     }
 
@@ -88,38 +123,9 @@ public class CharonClient {
             String message = command[1];
             Chat chat = new Chat(clientId, to, message);
             String chatJson = gson.toJson(chat);
-            out.println("$" + chatJson);
+            out.println(Fast.st[2] + chatJson);
         } else {
             System.out.println("Usage: @<Client-Id> <message>");
-        }
-    }
-
-    public static void processCommand(String commandLine, PrintWriter out) {
-        String[] cmd = commandLine.split(" ", 3);
-        if (cmd[0].equals("/exit")) {
-            success(EXITING);
-            System.exit(0);
-        } else if (cmd[0].equals("/level")) {
-            System.out.println("Your current access level is: " + level);
-        } else if (cmd[0].equals("/say")) {
-            if(level >= 1){
-                String[] cmdx = commandLine.split(" ", 3);
-                if (cmdx.length == 3) {
-                    String to = cmdx[1];
-                    String message = cmdx[2];
-                    Chat chat = new Chat(clientId, to, message);
-                    String chatJson = gson.toJson(chat);
-                    out.println("$" + chatJson); // $ をつけてメッセージを送信するとJson形式の文字列という意味となる
-                } else {
-                    System.out.println("Usage: /say <Client-Id> <message>");
-                }
-            } else {
-                warning("You do not have permission to use this command.");
-            }
-        } else if (cmd[0].equals("/list")){
-            out.println("!list"); // サーバーに !list コマンドを送信
-        } else {
-            System.out.println("Invalid command. Please try again.");
         }
     }
 }
