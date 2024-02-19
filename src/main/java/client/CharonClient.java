@@ -21,7 +21,7 @@ public class CharonClient {
     public static int level = 1;
     public static long joinTime;
     public static Socket socket;
-    private static String clientId;
+    public static String clientId;
     public static final List<String> cltNotes = new ArrayList<>();
     private static final Gson gson = new Gson();
 
@@ -51,7 +51,7 @@ public class CharonClient {
                         if (fromServer.startsWith("levelUpdate:")) {
                             level = updateAccessLevel(fromServer);
                             continue;
-                        } else if (fromServer.startsWith("file:start:")) {
+                        } else if (fromServer.startsWith(Fast.st[4])) {
                             String[] parts = fromServer.split(":");
                             String name = parts[2];
                             long size = Long.parseLong(parts[3]);

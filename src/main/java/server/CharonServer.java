@@ -1,13 +1,17 @@
 package server;
 
 import data.Chat;
+import data.Fcx;
 import global.Fast;
 import net.Network;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static server.SvrMessages.*;
@@ -24,8 +28,12 @@ public class CharonServer {
     // クライアントの権限レベルを保持するマップ
     public static final Map<String, Integer> permissionMap = new ConcurrentHashMap<>();
 
-    public static ServerSocket svrSocket;
     public static final long serverStartTime = System.currentTimeMillis();
+
+    public static ServerSocket svrSocket;
+
+    // クライアントからのファイルを管理する
+    public static final List<Fcx> fcxList = new ArrayList<>();
 
     public static final List<String> msgList = new ArrayList<>(); // メッセージの履歴
     public static final List<String> cmdList = new ArrayList<>(); // コマンド履歴
@@ -107,6 +115,7 @@ public class CharonServer {
                     type += ":";
 
                     if(type.equals(Fast.st[0])){
+                        // !t:  テキスト
                         Boolean isMuted = CharonServer.muteMap.getOrDefault(clientId, false);
                         if (!isMuted) {
                             // 通常のテキストメッセージの処理
@@ -116,16 +125,29 @@ public class CharonServer {
                             muteMsgList.add(clientId + ": " + line);
                         }
                     } else if (type.equals(Fast.st[1])){
+                        // !c:  コマンド
                         String[] cmd = line.split(" ", 3);
                         if (cmd[0].equals("/list")) {
                             processor.showList(out, clientMap);
                         }
                         processor.showList(out, clientMap);
                     } else if (type.equals(Fast.st[2])){
+                        // !j:   JSON
                         // MessageProcessor を使用してメッセージを処理 (sayコマンド)
                         processor.sendJson(line, clientMap);
+                    } else if(type.equals(Fast.st[3])){
+                        // !f:   ファイル
+                        try {
+                            // Fcxインスタンスを受信する
+                            Fcx receivedFcx = getFcx();
+                            fcxList.add(receivedFcx); // リストに追加
+                            debug("Received Fcx instance: " + receivedFcx.toString());
+                        } catch (IOException e) {
+                            warning(e.getMessage());
+                        } catch (ClassNotFoundException e) {
+                            warning("Class Not Found (FCX)" + e.getMessage());
+                        }
                     }
-
                 }
                 // readLine() が null を返した場合、クライアントが接続を閉じたことを示す
                 info("Client " + clientId + " disconnected.");
@@ -145,6 +167,16 @@ public class CharonServer {
                 streamMap.remove(clientId);
                 permissionMap.remove(clientId);
             }
+        }
+
+        private Fcx getFcx() throws IOException, ClassNotFoundException {
+            DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
+            int objectSize = dis.readInt(); // オブジェクトサイズを読み取る
+            byte[] objectBytes = new byte[objectSize];
+            dis.readFully(objectBytes); // オブジェクトデータを全て読み取る
+            ByteArrayInputStream bais = new ByteArrayInputStream(objectBytes);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            return (Fcx) ois.readObject();
         }
     }
 }

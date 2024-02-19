@@ -7,6 +7,7 @@ import java.io.PrintWriter;
 import java.util.Map;
 
 import static server.CharonServer.permissionMap;
+import static server.CharonServer.*;
 import static server.SvrMessages.*;
 
 public class MessageProcessor {

@@ -2,10 +2,17 @@ package server;
 
 import client.CltMessages;
 import data.Chat;
+import data.Fcx;
+import data.FcxManager;
+import global.Cmd;
+import global.Fast;
 
 import java.io.*;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.IntStream;
 
 import static server.SvrMessages.*;
 import static server.CharonServer.clientMap;
@@ -25,8 +32,43 @@ public final class SvrCommand {
             case "/unmute" -> unmute(parts);
             case "/log" -> log(parts);
             case "/give" -> give(parts);
+            case "/file" -> file(parts);
+            case "/ls" -> Cmd.ls(parts[1]);
             default -> unknown(parts); // 上記以外のコマンドの処理
         }
+    }
+
+    /**
+     * <h2>file</h2>
+     * fcxの保存・削除・一覧する
+     * @param parts
+     */
+    private static void file(String[] parts){
+        int size = CharonServer.fcxList.size();
+        if (size == 0) {
+            warning("No FCX");
+            return;
+        }
+        if (parts.length == 1) {
+            System.out.println("Usage : /file [--list|--save|--del]");
+        } else if (parts.length >= 2){
+            String opt = parts[1];
+
+            switch(opt){
+                case "--list" -> {
+                    for (int i = 0; i < size; i++) {
+                        Fcx fcx = CharonServer.fcxList.get(i);
+                        System.out.printf("%3d %s \n" ,i , " : " + fcx.toString());
+                    }
+                }
+                case "--save" -> {
+                    if(FcxManager.saveAllFcx(CharonServer.fcxList)){
+                        notice("Save All File");
+                    }
+                }
+            }
+        }
+        debug("size : " + size);
     }
 
     private static void unknown(String[] parts) {
@@ -54,7 +96,7 @@ public final class SvrCommand {
                     DataOutputStream dos = new DataOutputStream(os);
                     debug("Sending file " + file.getName() + " to @" + targetClientId);
 
-                    msg.println("file:start:" + file.getName() + ":" + fileSize); //　ヘッダーを送る
+                    msg.println(Fast.st[4] + file.getName() + ":" + fileSize); //　ヘッダーを送る
                     FileInputStream fis = new FileInputStream(file); // ファイルをストリームに変換
                     byte[] buffer = new byte[4096];
                     int read;

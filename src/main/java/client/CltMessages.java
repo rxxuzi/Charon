@@ -25,25 +25,35 @@ public class CltMessages extends Message {
             /say <client-id> <message> - Send a message to a specific client
             /ls - List all files in the current directory
             /cat <filename> - Display the contents of a file
-            /rm  <filename> - Delete a file                
+            /rm  <filename> - Delete a file
+            /pwd - Print the current working directory       
             """;
+
     public static final String NOTE_HELP = """
-            <--del | -d> [index]   : Delete note
+            <--del | -d> [index]    : Delete note
             <--view | -v>           : View notes
             <--clear | -c>          : Clear notes
             <--pop | -p>            : Pop note
-            <--save | -s>           : Save notes
+            <--save | -s> [filename]: Save notes
             <--help | -h>           : Show this help
             """;
+
     public static int updateAccessLevel(String fromServer) {
         int level = Integer.parseInt(fromServer.split(":")[1]);
         notice("Your access level has been updated to: " + level);
         return level; // 返り値は、ユーザーのアクセスレベルを返す。
     }
 
-    public static void saveNote(){
+    public static void saveNote(String filename){
         notice("Note file saved.");
-        File file = new File("note.txt");
+        String path;
+        if(filename == null || filename.isEmpty() || filename.equals(" ")){
+            path = ".note";
+        } else {
+            path = filename;
+        }
+
+        File file = new File(path);
 
         try (FileWriter fw = new FileWriter(file)){
             for (String memo : cltNotes) {
@@ -53,5 +63,4 @@ public class CltMessages extends Message {
             warning("Error: " + e.getMessage());
         }
     }
-
 }

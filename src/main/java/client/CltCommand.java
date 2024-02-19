@@ -2,17 +2,16 @@ package client;
 
 import com.google.gson.Gson;
 import data.Chat;
+import data.Fcx;
 import global.Cmd;
 import global.Fast;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 
-import static client.CharonClient.cltNotes;
-import static client.CharonClient.level;
+import static client.CharonClient.*;
 import static client.CltMessages.*;
 
-public class CltCommand {
+public final class CltCommand {
 
     public static void execute(String commandLine, PrintWriter out) {
         String[] cmd = commandLine.split(" ", 3);
@@ -20,6 +19,7 @@ public class CltCommand {
         try {
             switch (exec) {
                 case "/exit" -> exit(out);
+                case "/send" -> send(commandLine, out);
                 case "/level" -> level();
                 case "/say" -> say(commandLine, out);
                 case "/list" -> out.println(Fast.st[1] + "list"); // サーバーに list コマンドを送信
@@ -28,6 +28,7 @@ public class CltCommand {
                 case "/rm" -> Cmd.rm(cmd[1]);
                 case "/note" -> note(cmd);
                 case "/help" -> System.out.println(CMD_HELP);
+                case "/pwd" -> Cmd.pwd();
                 default -> unknown(cmd[0]);
             }
         } catch (ArrayIndexOutOfBoundsException | NullPointerException e) {
@@ -37,14 +38,55 @@ public class CltCommand {
     }
 
     /**
+     * <h2>send</h2>
+     * {@code /send <file-path>}
+     */
+    public static void send(String commandLine, PrintWriter out) {
+        try {
+            String[] cmd = commandLine.split(" ", 2);
+            if (cmd.length < 2) {
+                System.out.println("Usage: /send <file-path>");
+                return;
+            }
+            String filePath = cmd[1];
+            File file = new File(filePath);
+            if (!file.exists()) {
+                System.out.println("File does not exist.");
+                return;
+            }
+
+            Fcx fcx = new Fcx(CharonClient.clientId, "server", filePath);
+
+            debug(fcx.toString());
+
+            out.println(Fast.st[3]); // ヘッダを送信。サーバー側でオブジェクトを受け入れるようにする
+            out.flush(); // PrintWriterのフラッシュを確実に行う
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            oos.writeObject(fcx);
+            oos.flush();
+            byte[] serializedData = baos.toByteArray();
+
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeInt(serializedData.length); // サイズを送信（int型として送信）
+            dos.write(serializedData); // シリアライズされたオブジェクトを送信
+
+            System.out.println("File sent successfully.");
+        } catch (Exception e) {
+            warning(e.getMessage());
+        }
+    }
+
+    /**
      * <h2>note</h2>
      * <pre>
-     * --del [index]   : メモを削除
-     * --view          : メモを表示
-     * --clear         : メモをクリア
-     * --pop           : メモをポップ（削除して表示）
-     * --save          : メモを保存
-     * --help          : ヘルプを表示
+     * --del [index]     : メモを削除
+     * --view            : メモを表示
+     * --clear           : メモをクリア
+     * --pop             : メモをポップ（削除して表示）
+     * --save [filename] : メモを保存
+     * --help            : ヘルプを表示
      * </pre>
      * @param opt オプション
      * @param note メモ内容
@@ -71,7 +113,7 @@ public class CltCommand {
                     System.out.println(cltNotes.remove(cltNotes.size() -1));
                 }
             }
-            case "--save" , "-s" -> CltMessages.saveNote();
+            case "--save" , "-s" -> CltMessages.saveNote(note);
             case "--help" , "-h" -> System.out.println(CltMessages.NOTE_HELP);
             default -> System.out.println("Invalid option: " + opt + "\n Type /note --help for help");
         }
@@ -84,7 +126,7 @@ public class CltCommand {
      */
     private static void exit(PrintWriter out) {
         try {
-            CharonClient.socket.close();
+            socket.close();
             out.close();
         } catch (IOException e) {
             warning(e.getMessage());
