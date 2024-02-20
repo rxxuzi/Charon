@@ -47,7 +47,7 @@ public class Cmd {
     }
 
     public static String pwd(){
-        return new File(".").getAbsolutePath();
+        return new File("./").getAbsolutePath();
     }
 
     public static void cat(String filename){

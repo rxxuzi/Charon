@@ -2,17 +2,13 @@ package server;
 
 import client.CltMessages;
 import data.Chat;
-import data.Fcx;
-import data.FcxManager;
-import global.Cmd;
+import opium.Opium;
+import opium.Opioid;
 import global.Fast;
 
 import java.io.*;
-import java.util.List;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.IntStream;
 
 import static server.SvrMessages.*;
 import static server.CharonServer.clientMap;
@@ -32,21 +28,22 @@ public final class SvrCommand {
             case "/unmute" -> unmute(parts);
             case "/log" -> log(parts);
             case "/give" -> give(parts);
-            case "/file" -> file(parts);
-            case "/ls" -> Cmd.ls(parts[1]);
+            case "/file" -> file(commandLine);
             default -> unknown(parts); // 上記以外のコマンドの処理
         }
     }
 
     /**
      * <h2>file</h2>
-     * fcxの保存・削除・一覧する
-     * @param parts
+     * Opiumの保存・削除・一覧する
+     * @param commandLine
      */
-    private static void file(String[] parts){
-        int size = CharonServer.fcxList.size();
+    private static void file(String commandLine){
+        String[] parts = commandLine.split(" ");
+
+        int size = Opioid.opiumList.size();
         if (size == 0) {
-            warning("No FCX");
+            warning("No Opium");
             return;
         }
         if (parts.length == 1) {
@@ -57,13 +54,47 @@ public final class SvrCommand {
             switch(opt){
                 case "--list" -> {
                     for (int i = 0; i < size; i++) {
-                        Fcx fcx = CharonServer.fcxList.get(i);
-                        System.out.printf("%3d %s \n" ,i , " : " + fcx.toString());
+                        Opium opium = Opioid.opiumList.get(i);
+                        System.out.printf("%3d %s \n" ,i , " : " + opium.toString());
                     }
                 }
                 case "--save" -> {
-                    if(FcxManager.saveAllFcx(CharonServer.fcxList)){
-                        notice("Save All File");
+                    if (parts.length == 2) {
+                        warning("Usage : /file --save <index | -a>");
+                    }
+                    if (parts.length >= 3) {
+                        String arg = parts[2];
+                        if (arg.equals("-a")) {
+                            if(Opioid.saveAll()){
+                                notice("Save All File");
+                            }
+                        } else {
+                            try{
+                                int index = Integer.parseInt(arg);
+                                if(Opioid.save(index)){
+                                    notice("Save File");
+                                }
+                            } catch (NumberFormatException e) {
+                                warning("Invalid index: " + arg);
+                            }
+                        }
+                    }
+                }
+
+                case "--detail" -> {
+                    if (parts.length == 2) {
+                        warning("Usage : /file --detail <index>");
+                    } else {
+                        String arg = parts[2];
+                        try{
+                            int index = Integer.parseInt(arg);
+                            if(index < size){
+                                Opium opium = Opioid.opiumList.get(index);
+                                System.out.println(opium.detail());
+                            }
+                        } catch (NumberFormatException e) {
+                            warning("Invalid index: " + arg);
+                        }
                     }
                 }
             }
@@ -319,7 +350,7 @@ public final class SvrCommand {
      * <h2>log</h2>
      * メッセージログを表示する
      * @see CharonServer#msgList
-     * @param parts {@code /log [--msg|--cmd|--mute] <client-id> }
+     * @param parts {@code /log [--msg|--cmd|--mute|--chat] <client-id> }
      */
     public static void log(String[] parts) {
         if(parts.length == 1){

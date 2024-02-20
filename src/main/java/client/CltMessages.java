@@ -26,7 +26,8 @@ public class CltMessages extends Message {
             /ls - List all files in the current directory
             /cat <filename> - Display the contents of a file
             /rm  <filename> - Delete a file
-            /pwd - Print the current working directory       
+            /pwd - Print the current working directory
+            /send <filepath> - Send a file to the server
             """;
 
     public static final String NOTE_HELP = """

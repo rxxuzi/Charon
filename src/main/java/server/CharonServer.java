@@ -1,7 +1,8 @@
 package server;
 
 import data.Chat;
-import data.Fcx;
+import opium.Opium;
+import opium.Opioid;
 import global.Fast;
 import net.Network;
 
@@ -31,9 +32,6 @@ public class CharonServer {
     public static final long serverStartTime = System.currentTimeMillis();
 
     public static ServerSocket svrSocket;
-
-    // クライアントからのファイルを管理する
-    public static final List<Fcx> fcxList = new ArrayList<>();
 
     public static final List<String> msgList = new ArrayList<>(); // メッセージの履歴
     public static final List<String> cmdList = new ArrayList<>(); // コマンド履歴
@@ -136,16 +134,16 @@ public class CharonServer {
                         // MessageProcessor を使用してメッセージを処理 (sayコマンド)
                         processor.sendJson(line, clientMap);
                     } else if(type.equals(Fast.st[3])){
-                        // !f:   ファイル
+                        // !o:   opium
                         try {
-                            // Fcxインスタンスを受信する
-                            Fcx receivedFcx = getFcx();
-                            fcxList.add(receivedFcx); // リストに追加
-                            debug("Received Fcx instance: " + receivedFcx.toString());
+                            // Opiumインスタンスを受信する
+                            Opium receivedOpium = getOpium();
+                            Opioid.opiumList.add(receivedOpium); // リストに追加
+                            debug("Received Opium instance: " + receivedOpium.toString());
                         } catch (IOException e) {
                             warning(e.getMessage());
                         } catch (ClassNotFoundException e) {
-                            warning("Class Not Found (FCX)" + e.getMessage());
+                            warning("Class Not Found (Opium)" + e.getMessage());
                         }
                     }
                 }
@@ -169,14 +167,14 @@ public class CharonServer {
             }
         }
 
-        private Fcx getFcx() throws IOException, ClassNotFoundException {
+        private Opium getOpium() throws IOException, ClassNotFoundException {
             DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
             int objectSize = dis.readInt(); // オブジェクトサイズを読み取る
             byte[] objectBytes = new byte[objectSize];
             dis.readFully(objectBytes); // オブジェクトデータを全て読み取る
             ByteArrayInputStream bais = new ByteArrayInputStream(objectBytes);
             ObjectInputStream ois = new ObjectInputStream(bais);
-            return (Fcx) ois.readObject();
+            return (Opium) ois.readObject();
         }
     }
 }

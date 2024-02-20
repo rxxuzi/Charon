@@ -2,6 +2,7 @@ package security;
 
 import security.eula.EulaException;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -30,6 +31,10 @@ public class Hash {
     }
 
     public static String fileHash(String filePath) throws EulaException {
+        return fileHash(new File(filePath));
+    }
+
+    public static String fileHash(File file) throws EulaException {
         MessageDigest digest;
         try {
             digest = MessageDigest.getInstance("SHA-256");
@@ -37,7 +42,7 @@ public class Hash {
             throw new EulaException("SHA-256 algorithm not found", e);
         }
 
-        try(FileInputStream fis =  new FileInputStream(filePath)) {
+        try(FileInputStream fis =  new FileInputStream(file)) {
             byte[] byteArray = new byte[1024];
             int bytesCount;
 

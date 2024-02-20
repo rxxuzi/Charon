@@ -2,7 +2,7 @@ package client;
 
 import com.google.gson.Gson;
 import data.Chat;
-import data.Fcx;
+import opium.Opium;
 import global.Cmd;
 import global.Fast;
 
@@ -28,7 +28,7 @@ public final class CltCommand {
                 case "/rm" -> Cmd.rm(cmd[1]);
                 case "/note" -> note(cmd);
                 case "/help" -> System.out.println(CMD_HELP);
-                case "/pwd" -> Cmd.pwd();
+                case "/pwd" -> System.out.println(Cmd.pwd());
                 default -> unknown(cmd[0]);
             }
         } catch (ArrayIndexOutOfBoundsException | NullPointerException e) {
@@ -55,16 +55,16 @@ public final class CltCommand {
                 return;
             }
 
-            Fcx fcx = new Fcx(CharonClient.clientId, "server", filePath);
+            Opium opium = new Opium(CharonClient.clientId, "server", filePath);
 
-            debug(fcx.toString());
+            debug(opium.toString());
 
             out.println(Fast.st[3]); // ヘッダを送信。サーバー側でオブジェクトを受け入れるようにする
             out.flush(); // PrintWriterのフラッシュを確実に行う
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(fcx);
+            oos.writeObject(opium);
             oos.flush();
             byte[] serializedData = baos.toByteArray();
 
@@ -177,9 +177,9 @@ public final class CltCommand {
         if (cmd.length == 2) {
             CltCommand.note(cmd[1], "");
         } else if (cmd.length == 3) {
-            CltCommand.note(cmd[1], cmd[2]);
+            note(cmd[1], cmd[2]);
         } else {
-            CltCommand.note("--view", "");
+            System.out.println("Usage : /note [opt] [index|path]");
         }
     }
 
