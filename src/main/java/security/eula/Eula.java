@@ -1,14 +1,16 @@
 package security.eula;
 
 import javax.crypto.SecretKey;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.io.FileInputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Base64;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 /**
  * <h1>Eula</h1>
@@ -132,13 +134,4 @@ public class Eula {
             throw new EulaException("Failed to copy file.", e);
         }
     }
-
-    public static void zip(String sourcePath) throws EulaException {
-        // TODO
-    }
-
-    public static void unzip(String sourcePath) throws EulaException {
-        // TODO
-    }
-
 }
