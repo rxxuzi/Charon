@@ -2,6 +2,7 @@ package client;
 
 import com.google.gson.Gson;
 import data.Chat;
+import opium.Opioid;
 import opium.Opium;
 import global.Cmd;
 import global.Fast;
@@ -29,11 +30,24 @@ public final class CltCommand {
                 case "/note" -> note(cmd);
                 case "/help" -> System.out.println(CMD_HELP);
                 case "/pwd" -> System.out.println(Cmd.pwd());
+                case "/file" -> file();
                 default -> unknown(cmd[0]);
             }
         } catch (ArrayIndexOutOfBoundsException | NullPointerException e) {
             System.out.println("Invalid command: " + commandLine);
             unknown();
+        }
+    }
+
+    public static void file(){
+        int size = Opioid.opiumList.size();
+        if (size == 0){
+            System.out.println("No Opium");
+        } else {
+            for (int i = 0; i < size; i++) {
+                Opium opium = Opioid.opiumList.get(i);
+                System.out.printf("%3d %s \n" ,i , " : " + opium.toString());
+            }
         }
     }
 
@@ -58,20 +72,7 @@ public final class CltCommand {
             Opium opium = new Opium(CharonClient.clientId, "server", filePath);
 
             debug(opium.toString());
-
-            out.println(Fast.st[3]); // ヘッダを送信。サーバー側でオブジェクトを受け入れるようにする
-            out.flush(); // PrintWriterのフラッシュを確実に行う
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
-            oos.writeObject(opium);
-            oos.flush();
-            byte[] serializedData = baos.toByteArray();
-
-            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-            dos.writeInt(serializedData.length); // サイズを送信（int型として送信）
-            dos.write(serializedData); // シリアライズされたオブジェクトを送信
-
+            Opium.send(opium, out, socket);
             System.out.println("File sent successfully.");
         } catch (Exception e) {
             warning(e.getMessage());

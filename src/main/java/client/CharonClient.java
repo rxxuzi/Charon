@@ -4,6 +4,9 @@ import com.google.gson.Gson;
 import data.Chat;
 import global.Fast;
 import net.Network;
+import opium.Opioid;
+import opium.Opium;
+import opium.OpiumException;
 
 import java.io.*;
 import java.net.Socket;
@@ -47,20 +50,16 @@ public class CharonClient {
             new Thread(() -> {
                 try {
                     String fromServer;
+                    // 受信
                     while ((fromServer = in.readLine()) != null) {
                         if (fromServer.startsWith("levelUpdate:")) {
                             level = updateAccessLevel(fromServer);
                             continue;
-                        } else if (fromServer.startsWith(Fast.st[4])) {
-                            String[] parts = fromServer.split(":");
-                            String name = parts[2];
-                            long size = Long.parseLong(parts[3]);
-                            // ファイル受信処理を呼び出す
-                            boolean isSuccess = receiveFile(socket, name, size);
-                            if (!isSuccess) {
-                                out.println(CltMessages.FILE_RECEIVE_FAILED); // ファイル受信失敗時はサーバーに通知
-                            }
-                            continue; // ファイル受信後、次のメッセージの読み取りに戻る
+                        } else if (fromServer.startsWith(Fast.st[3])) {
+                            Opium opium = Opium.toOpium(socket);
+                            Opioid.opiumList.add(opium);
+                            debug("Received Opium instance:" + opium.toString());
+                            continue;
                         } else {
                             notice(fromServer); // サーバーからの受信したメッセージを出力
                         }
@@ -71,6 +70,8 @@ public class CharonClient {
                     }
                 } catch (IOException e) {
                     important("Error reading from server: " + e.getMessage());
+                } catch (OpiumException e) {
+                    warning(e.getMessage());
                 }
             }).start();
 
@@ -92,27 +93,6 @@ public class CharonClient {
             important("Exception caught when trying to connect to " + HOST + " on port " + PORT + "\n" + e.getMessage());
         } finally {
             socket.close();
-        }
-    }
-
-    private static boolean receiveFile(Socket socket, String fileName , long fileSize) throws IOException {
-        try {
-            DataInputStream dis = new DataInputStream(socket.getInputStream());
-            FileOutputStream fos = new FileOutputStream(fileName);
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            long totalRead = 0;
-            while (totalRead < fileSize) {
-                bytesRead = dis.read(buffer);
-                fos.write(buffer, 0, bytesRead);
-                totalRead += bytesRead;
-            }
-            fos.close();
-            success("File " + fileName + " received successfully.");
-            return true; // ファイル受信成功時はtrueを返す
-        } catch (IOException e) {
-            warning("Error receiving file: " + e.getMessage());
-            return false;
         }
     }
 

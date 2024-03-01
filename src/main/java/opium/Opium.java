@@ -1,12 +1,11 @@
 package opium;
 
+import global.Fast;
 import security.Hash;
 import security.eula.EulaException;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
+import java.net.Socket;
 import java.nio.file.Files;
 
 import static global.Message.colorize;
@@ -177,5 +176,84 @@ public class Opium implements Serializable {
         String s4 = colorize(5, "Hash: ") + hash;
 
         return s0 + "\n" + s1 + "\n" + s2 + "\n" + s3 + "\n" + s4;
+    }
+
+    /**
+     * Converts the data received from a socket into an Opium object. This method reads the size of the incoming
+     * object, retrieves the serialized object bytes, and deserializes them into an Opium object.
+     *
+     * @param socket The socket from which the Opium object data is received.
+     * @return An Opium object deserialized from the data received through the socket.
+     * @throws OpiumException If there is an I/O issue with the socket or if the class of the serialized object
+     *                        cannot be found during deserialization.
+     */
+    public static Opium toOpium(Socket socket) throws OpiumException {
+        try {
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            int objectSize = dis.readInt(); // オブジェクトサイズを読み取る
+            byte[] objectBytes = new byte[objectSize];
+            dis.readFully(objectBytes); // オブジェクトデータを全て読み取る
+            ByteArrayInputStream bais = new ByteArrayInputStream(objectBytes);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            return (Opium) ois.readObject();
+        } catch (IOException e) {
+            throw new OpiumException(e);
+        } catch (ClassNotFoundException e){
+            throw new OpiumException("Class Not Found", e);
+        }
+    }
+
+    /**
+     * Sends an Opium object to the specified socket. This method serializes the Opium object into bytes,
+     * sends a predefined header to signal the receiving server, and then writes the serialized object bytes
+     * to the socket's output stream.
+     *
+     * @param opium The Opium object to be sent.
+     * @param out   A PrintWriter connected to the socket's output stream, used for sending the header.
+     * @param socket The socket through which the Opium object will be sent.
+     * @throws OpiumException If there is an I/O issue during the serialization or transmission process.
+     */
+
+    public static void send(Opium opium, PrintWriter out, Socket socket) throws OpiumException {
+        try {
+            byte[] serializedData = serialize(opium, out);
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeInt(serializedData.length); // サイズを送信（int型として送信）
+            dos.write(serializedData); // シリアライズされたオブジェクトを送信
+        } catch (IOException e) {
+            throw new OpiumException(e);
+        }
+    }
+
+    /**
+     * Sends an Opium object to a server via a DataOutputStream. Similar to the first overload, but uses
+     * a DataOutputStream directly for sending the serialized Opium object's size and data, after sending
+     * a header through a PrintWriter.
+     *
+     * @param opium The Opium object to be sent.
+     * @param out   A PrintWriter connected to the output stream, used for sending the header.
+     * @param dos   A DataOutputStream connected to the socket's or server's output stream, used for sending
+     *              the Opium object's serialized data.
+     * @throws OpiumException If there is an I/O issue during the serialization or transmission process.
+     */
+    public static void send(Opium opium , PrintWriter out, DataOutputStream dos) throws OpiumException {
+        try {
+            byte[] serializedData = serialize(opium, out);
+            dos.writeInt(serializedData.length); // サイズを送信（int型として送信）
+            dos.write(serializedData); // シリアライズされたオブジェクトを送信
+        } catch (IOException e) {
+            throw new OpiumException(e);
+        }
+    }
+
+    private static byte[] serialize(Opium opium , PrintWriter out) throws IOException {
+        out.println(Fast.st[3]); // ヘッダを送信。サーバー側でオブジェクトを受け入れるようにする
+        out.flush(); // PrintWriterのフラッシュを確実に行う
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+        oos.writeObject(opium);
+        oos.flush();
+        return baos.toByteArray();
     }
 }

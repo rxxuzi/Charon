@@ -5,6 +5,7 @@ import data.Chat;
 import opium.Opium;
 import opium.Opioid;
 import global.Fast;
+import opium.OpiumException;
 
 import java.io.*;
 import java.util.Random;
@@ -117,26 +118,19 @@ public final class SvrCommand {
         if (cmd.length >= 3){
             String targetClientId = cmd[1];
             String filePath = cmd[2];
+            String from = "server";
 
             File file = new File(filePath);
             if (file.exists() && file.isFile()) {
                 try {
-                    long fileSize = file.length();
-                    PrintWriter msg = clientMap.get(targetClientId);
+                    // Opiumインスタンスをクライアントに送信
+                    Opium opium = new Opium(from, targetClientId, file, false);
+                    PrintWriter out = clientMap.get(targetClientId);
                     OutputStream os = CharonServer.streamMap.get(targetClientId);
                     DataOutputStream dos = new DataOutputStream(os);
-                    debug("Sending file " + file.getName() + " to @" + targetClientId);
-
-                    msg.println(Fast.st[4] + file.getName() + ":" + fileSize); //　ヘッダーを送る
-                    FileInputStream fis = new FileInputStream(file); // ファイルをストリームに変換
-                    byte[] buffer = new byte[4096];
-                    int read;
-                    while ((read = fis.read(buffer)) > 0) {
-                        dos.write(buffer, 0, read);
-                    }
-                    fis.close();
-                } catch (IOException e) {
-                    System.out.println("Error sending file: " + e.getMessage());
+                    Opium.send(opium, out, dos);
+                } catch (OpiumException e) {
+                    warning(e.getMessage());
                 }
             } else {
                 warning("Please enter a valid file path");

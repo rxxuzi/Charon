@@ -5,6 +5,7 @@ import opium.Opium;
 import opium.Opioid;
 import global.Fast;
 import net.Network;
+import opium.OpiumException;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -137,13 +138,11 @@ public class CharonServer {
                         // !o:   opium
                         try {
                             // Opiumインスタンスを受信する
-                            Opium receivedOpium = getOpium();
+                            Opium receivedOpium = Opium.toOpium(clientSocket);
                             Opioid.opiumList.add(receivedOpium); // リストに追加
                             debug("Received Opium instance: " + receivedOpium.toString());
-                        } catch (IOException e) {
-                            warning(e.getMessage());
-                        } catch (ClassNotFoundException e) {
-                            warning("Class Not Found (Opium)" + e.getMessage());
+                        } catch (OpiumException e) {
+                            throw new RuntimeException(e);
                         }
                     }
                 }
@@ -167,15 +166,6 @@ public class CharonServer {
             }
         }
 
-        private Opium getOpium() throws IOException, ClassNotFoundException {
-            DataInputStream dis = new DataInputStream(clientSocket.getInputStream());
-            int objectSize = dis.readInt(); // オブジェクトサイズを読み取る
-            byte[] objectBytes = new byte[objectSize];
-            dis.readFully(objectBytes); // オブジェクトデータを全て読み取る
-            ByteArrayInputStream bais = new ByteArrayInputStream(objectBytes);
-            ObjectInputStream ois = new ObjectInputStream(bais);
-            return (Opium) ois.readObject();
-        }
     }
 }
 
