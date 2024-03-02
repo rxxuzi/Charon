@@ -4,7 +4,6 @@ import client.CltMessages;
 import data.Chat;
 import opium.Opium;
 import opium.Opioid;
-import global.Fast;
 import opium.OpiumException;
 
 import java.io.*;
@@ -37,29 +36,26 @@ public final class SvrCommand {
     /**
      * <h2>file</h2>
      * Opiumの保存・削除・一覧する
-     * @param commandLine
+     * @param commandLine {@code /file [--list|--save|--detail|--remove|--sort]}
      */
     private static void file(String commandLine){
         String[] parts = commandLine.split(" ");
 
-        int size = Opioid.opiumList.size();
+        int size = Opioid.list.size();
         if (size == 0) {
             warning("No Opium");
             return;
         }
         if (parts.length == 1) {
-            System.out.println("Usage : /file [--list|--save|--del]");
+            System.out.println("Usage : /file [--list|--save|--detail|--remove|--sort]");
+            System.out.println("Usage : /file [-l|-S|-d|-r|-s]");
         } else if (parts.length >= 2){
             String opt = parts[1];
 
             switch(opt){
-                case "--list" -> {
-                    for (int i = 0; i < size; i++) {
-                        Opium opium = Opioid.opiumList.get(i);
-                        System.out.printf("%3d %s \n" ,i , " : " + opium.toString());
-                    }
-                }
-                case "--save" -> {
+                case "--list" , "-l" -> Opioid.show();
+
+                case "--save" , "-S" -> {
                     if (parts.length == 2) {
                         warning("Usage : /file --save <index | -a>");
                     }
@@ -82,7 +78,7 @@ public final class SvrCommand {
                     }
                 }
 
-                case "--detail" -> {
+                case "--detail" , "-d" -> {
                     if (parts.length == 2) {
                         warning("Usage : /file --detail <index>");
                     } else {
@@ -90,11 +86,38 @@ public final class SvrCommand {
                         try{
                             int index = Integer.parseInt(arg);
                             if(index < size){
-                                Opium opium = Opioid.opiumList.get(index);
+                                Opium opium = Opioid.list.get(index);
                                 System.out.println(opium.detail());
                             }
                         } catch (NumberFormatException e) {
                             warning("Invalid index: " + arg);
+                        }
+                    }
+                }
+
+                case "--remove" , "-r" -> {
+                    if(parts.length == 2) {
+                        warning("Usage : /file --remove <index>");
+                    } else {
+                        String arg = parts[2];
+                        try {
+                            int index = Integer.parseInt(arg);
+                            if (index < size) {
+                                Opioid.remove(index);
+                            }
+                        } catch (NumberFormatException e) {
+                            warning("Invalid index: " + arg);
+                        }
+                    }
+                }
+
+                case "--sort" , "-s" -> {
+                    if(parts.length == 2) {
+                        warning("Usage : /file --sort [-n|-s|-t]");
+                    } else {
+                        String arg = parts[2];
+                        if(Opioid.sort(arg)) {
+                            Opioid.show();
                         }
                     }
                 }

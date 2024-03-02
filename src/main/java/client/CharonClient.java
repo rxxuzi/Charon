@@ -57,7 +57,7 @@ public class CharonClient {
                             continue;
                         } else if (fromServer.startsWith(Fast.st[3])) {
                             Opium opium = Opium.toOpium(socket);
-                            Opioid.opiumList.add(opium);
+                            Opioid.list.add(opium);
                             debug("Received Opium instance:" + opium.toString());
                             continue;
                         } else {

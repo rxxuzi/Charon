@@ -34,6 +34,7 @@ public class Opium implements Serializable {
     public String to;
     public String from;
     public long size;
+    public long time;
     public boolean send;
     private boolean isDir;
     public String hash;
@@ -110,6 +111,7 @@ public class Opium implements Serializable {
 
         this.isDir = file.isDirectory();
         this.size = file.length();
+        this.time = System.currentTimeMillis();
     }
 
     /**

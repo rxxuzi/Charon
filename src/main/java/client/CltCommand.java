@@ -40,12 +40,12 @@ public final class CltCommand {
     }
 
     public static void file(){
-        int size = Opioid.opiumList.size();
+        int size = Opioid.list.size();
         if (size == 0){
             System.out.println("No Opium");
         } else {
             for (int i = 0; i < size; i++) {
-                Opium opium = Opioid.opiumList.get(i);
+                Opium opium = Opioid.list.get(i);
                 System.out.printf("%3d %s \n" ,i , " : " + opium.toString());
             }
         }

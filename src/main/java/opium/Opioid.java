@@ -26,13 +26,13 @@ import java.util.stream.IntStream;
 
 public class Opioid {
 
-    public static List<Opium> opiumList = new ArrayList<>();
+    public static List<Opium> list = new ArrayList<>();
     private static List<Opium> copylist = new ArrayList<>();
 
     public static boolean saveAll(){
         AtomicBoolean fail = new AtomicBoolean(false);
-        IntStream.range(0, opiumList.size()).parallel().forEach(i -> {
-            Opium opium = opiumList.get(i);
+        IntStream.range(0, list.size()).parallel().forEach(i -> {
+            Opium opium = list.get(i);
             if (!opium.save(opium.name)) {
                 fail.set(true);
             }
@@ -41,55 +41,88 @@ public class Opioid {
     }
 
     public static boolean save(int index){
-        Opium opium = opiumList.get(index);
+        Opium opium = list.get(index);
         return opium.save(); // 成功したら true を返す。失敗したら false を返す。
     }
 
     public static void add(Opium opium){
-        opiumList.add(opium);
+        list.add(opium);
     }
 
     public static void add(Opium... opium){
-        opiumList.addAll(Arrays.asList(opium));
+        list.addAll(Arrays.asList(opium));
     }
+
     public static void remove(Opium opium){
-        opiumList.remove(opium);
+        list.remove(opium);
+    }
+
+    public static void remove(int index){
+        if (index < list.size() && index >= 0){
+            remove(list.get(index));
+        }
     }
 
     public static void remove(Opium... opium){
-        opiumList.removeAll(Arrays.asList(opium));
+        list.removeAll(Arrays.asList(opium));
     }
 
     public static void removeOpium(List<Opium> list){
-        opiumList.removeAll(list);
+        Opioid.list.removeAll(list);
     }
 
     public static void clear(){
-        opiumList.clear();
+        list.clear();
     }
 
     public static void optimaizor(){
         // 最適化するメソッド
         // 存在しないユーザーのファイルを削除する
         Set<String> user = CharonServer.clientMap.keySet();
-        opiumList.removeIf(o -> !user.contains(o.from) || !user.contains(o.to));
+        list.removeIf(o -> !user.contains(o.from) || !user.contains(o.to));
     }
 
     public static List<Opium> filterFromUser(String from){
-        return opiumList.stream().filter(o -> o.from.equals(from)).toList();
+        return list.stream().filter(o -> o.from.equals(from)).toList();
     }
 
     public static List<Opium> filterToUser(String to){
-        return opiumList.stream().filter(o -> o.to.equals(to)).toList();
+        return list.stream().filter(o -> o.to.equals(to)).toList();
     }
 
     public static void sortByFileSize(){
         // ファイルサイズでソートする
-        opiumList.sort(Comparator.comparingLong(o -> o.size));
+        list.sort(Comparator.comparingLong(o -> o.size));
     }
 
     public static void sortByFileName(){
         // ファイル名でソートする
-        opiumList.sort(Comparator.comparing(o -> o.name));
+        list.sort(Comparator.comparing(o -> o.name));
+    }
+
+    public static void sortByTime(){
+        // 時間でソートする.
+        list.sort(Comparator.comparing(o -> o.time));
+    }
+
+    public static void show(){
+        int size = list.size();
+        for (int i = 0 ; i < size ; i ++ ){
+            Opium opium = Opioid.list.get(i);
+            System.out.printf("%3d %s \n" ,i , " : " + opium.toString());
+        }
+    }
+
+    public static boolean sort(String opt){
+        if (opt.startsWith("-n")){
+            sortByFileName();
+        } else if (opt.startsWith("-s")) {
+            sortByFileSize();
+        } else if (opt.startsWith("-t")) {
+            sortByTime();
+        } else {
+            return false;
+        }
+        return true;
     }
 }

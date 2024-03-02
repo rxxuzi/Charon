@@ -139,7 +139,7 @@ public class CharonServer {
                         try {
                             // Opiumインスタンスを受信する
                             Opium receivedOpium = Opium.toOpium(clientSocket);
-                            Opioid.opiumList.add(receivedOpium); // リストに追加
+                            Opioid.list.add(receivedOpium); // リストに追加
                             debug("Received Opium instance: " + receivedOpium.toString());
                         } catch (OpiumException e) {
                             throw new RuntimeException(e);
