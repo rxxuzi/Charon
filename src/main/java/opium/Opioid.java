@@ -3,6 +3,7 @@ package opium;
 import server.CharonServer;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.IntStream;
 
@@ -124,5 +125,19 @@ public class Opioid {
             return false;
         }
         return true;
+    }
+
+    public static boolean zip(String zipName){
+        AtomicBoolean success = new AtomicBoolean(true);
+        OpiumZip zip = new OpiumZip(list);
+        CompletableFuture<Void> future = zip.save(zipName);
+        future.thenRun(() -> System.out.println("Compression completed."))
+                .exceptionally(e -> {
+                    success.set(false);
+                    System.err.println("Failed");
+                    return null; // Voidメソッドでの返り値はnull
+                    });
+
+        return success.get();
     }
 }

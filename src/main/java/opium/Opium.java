@@ -156,6 +156,20 @@ public class Opium implements Serializable {
     }
 
     /**
+     * Saves the loaded file data to the specified directory.
+     * @param dirPath The directory path where the file should be saved.
+     * @return true if the file is successfully saved, false otherwise.
+     */
+    public boolean save2dir(String dirPath){
+        File dir = new File(dirPath);
+        if (dir.isDirectory()){
+            return save(dirPath + this.name);
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Provides a string representation of this Opium object.
      *
      * @return The string representation.

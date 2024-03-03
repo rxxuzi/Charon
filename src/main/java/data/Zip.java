@@ -1,22 +1,19 @@
 package data;
 
-import security.eula.EulaException;
-
 import java.io.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public class Zip {
+public abstract class Zip {
 
-    public static void zip(String targetPath) throws EulaException {
+    protected static void zip(String targetPath, String zipName) throws IOException {
         File target = new File(targetPath);
-
-        File zip = new File(targetPath + ".zip");
+        File zip = new File(zipName);
 
         try ( ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zip))) {
             compress(zos, target);
         } catch (IOException e) {
-            throw new EulaException("Failed to zip file.", e);
+            throw new IOException("Failed to zip file.", e);
         }
     }
 

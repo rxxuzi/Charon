@@ -5,6 +5,7 @@ import data.Chat;
 import opium.Opium;
 import opium.Opioid;
 import opium.OpiumException;
+import opium.OpiumZip;
 
 import java.io.*;
 import java.util.Random;
@@ -47,8 +48,8 @@ public final class SvrCommand {
             return;
         }
         if (parts.length == 1) {
-            System.out.println("Usage : /file [--list|--save|--detail|--remove|--sort]");
-            System.out.println("Usage : /file [-l|-S|-d|-r|-s]");
+            System.out.println("Usage : /file [--list|--save|--detail|--remove|--sort|--zip]");
+            System.out.println("Usage : /file [-l|-S|-d|-r|-s|-z]");
         } else if (parts.length >= 2){
             String opt = parts[1];
 
@@ -121,9 +122,27 @@ public final class SvrCommand {
                         }
                     }
                 }
+
+                case "--zip" , "-Z" , "-z" -> {
+                    if(parts.length < 3) {
+                        warning("Usage : /file --zip <zip file name>");
+                    } else {
+                        String zipName = parts[2];
+                        if (!zipName.endsWith(".zip")){
+                            zipName += ".zip";
+                        }
+                        if (Opioid.zip(zipName)){
+                            success("Saved zip : " + zipName);
+                        } else {
+                            warning("Failed to save zip : " + zipName);
+                        }
+                        if (!OpiumZip.deleteTmpDir()) {
+                            warning("Failed to delete tmp directory");
+                        }
+                    }
+                }
             }
         }
-        debug("size : " + size);
     }
 
     private static void unknown(String[] parts) {
