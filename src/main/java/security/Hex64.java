@@ -1,21 +1,21 @@
 package security;
 
 public final class Hex64 {
-    private static final String CHAR_SET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-";
+    private static final String CHAR_SET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ+-";
 
     // ipv6をエンコードする
     public static String enc(String address){
         boolean isLLA = address.contains("%"); // address内に%が入っていたら LLAフラグを立てる
         String ipv6 = normalize(address);
-        if (isLLA) return encLLA(ipv6);
-        else return encGUA(ipv6);
+        if (isLLA) return compress(encLLA(ipv6));
+        else return compress(encGUA(ipv6));
     }
 
     // ipv6をデコードする
     public static String dec(String address){
         boolean isLLA = address.contains("%"); // address内に%が入っていたら LLAフラグを立てる
-        if (isLLA) return encLLA(address);
-        else return encGUA(address);
+        if (isLLA) return decLLA(decompress(address));
+        else return decGUA(decompress(address));
     }
 
     public static String encLLA(String ipv6){
@@ -130,5 +130,47 @@ public final class Hex64 {
         // 処理したセグメントを":"で結合して返す
         return String.join(":", segments);
     }
-}
 
+    private static String compress(String input) {
+        StringBuilder compressed = new StringBuilder();
+        int count = 1;
+
+        for (int i = 1; i <= input.length(); i++) {
+            if (i < input.length() && input.charAt(i) == input.charAt(i - 1)) {
+                count++;
+            } else {
+                if (count >= 3) {
+                    // Encode count in base-64
+                    char base64Char = CHAR_SET.charAt(count);
+                    compressed.append(input.charAt(i - 1)).append('*').append(base64Char);
+                } else {
+                    compressed.append(String.valueOf(input.charAt(i - 1)).repeat(Math.max(0, count)));
+                }
+                count = 1;
+            }
+        }
+        return compressed.toString();
+    }
+
+    private static String decompress(String compressed) {
+        StringBuilder decompressed = new StringBuilder();
+        int i = 0;
+
+        while (i < compressed.length()) {
+            char currentChar = compressed.charAt(i);
+            if (i + 2 < compressed.length() && compressed.charAt(i + 1) == '*') {
+                int countIndex = CHAR_SET.indexOf(compressed.charAt(i + 2));
+                if (countIndex != -1) {
+                    decompressed.append(String.valueOf(currentChar).repeat(countIndex));
+                    i += 3; // Skip over the current pattern
+                    continue;
+                }
+            }
+            decompressed.append(currentChar);
+            i++;
+        }
+
+        return decompressed.toString();
+    }
+
+}
