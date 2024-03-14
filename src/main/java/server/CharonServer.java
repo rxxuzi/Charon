@@ -4,7 +4,7 @@ import data.Chat;
 import opium.Opium;
 import opium.Opioid;
 import global.Fast;
-import net.Network;
+import net.Spider;
 import opium.OpiumException;
 
 import java.io.*;
@@ -55,7 +55,7 @@ public class CharonServer {
             }
         }).start();
 
-        svrSocket = new Network(PORT).createLocalhostServerSocket();
+        svrSocket = new Spider(PORT).createLocalhostServerSocket();
 
         try {
             while (isRunning) {

@@ -3,7 +3,7 @@ package client;
 import com.google.gson.Gson;
 import data.Chat;
 import global.Fast;
-import net.Network;
+import net.Spider;
 import opium.Opioid;
 import opium.Opium;
 import opium.OpiumException;
@@ -37,7 +37,7 @@ public class CharonClient {
         }
 
         important("Client ID: " + clientId);
-        socket = new Network(PORT).createSocket(HOST);
+        socket = new Spider(PORT).createSocket(HOST);
 
         try (PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));

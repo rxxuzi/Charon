@@ -6,14 +6,14 @@ import java.net.Socket;
 import java.util.Collections;
 import java.util.Enumeration;
 
-public class Network {
+public class Spider {
     private final int port;
 
-    public Network(int port) {
+    public Spider(int port) {
         this.port = port;
     }
 
-    public Network() throws IOException {
+    public Spider() throws IOException {
         this.port = findAvailablePort();
     }
 
