@@ -2,13 +2,18 @@ package client;
 
 import com.google.gson.Gson;
 import data.Chat;
+import data.User;
 import global.Fast;
 import net.Spider;
 import opium.Opioid;
 import opium.Opium;
 import opium.OpiumException;
+import security.eula.EulaException;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +21,7 @@ import java.util.Scanner;
 import java.util.UUID;
 
 import static client.CltMessages.*;
+import static java.lang.System.exit;
 
 public class CharonClient {
     private static final String HOST = "localhost";
@@ -27,8 +33,8 @@ public class CharonClient {
     public static String clientId;
     public static final List<String> cltNotes = new ArrayList<>();
     private static final Gson gson = new Gson();
-
-    public static void main(String[] args) throws IOException {
+    private static User user;
+    public static void main(String[] args) throws IOException, EulaException {
         clientId = UUID.randomUUID().toString();
         Scanner sc = new Scanner(System.in);
         System.out.print("Enter client ID : ");
@@ -37,7 +43,16 @@ public class CharonClient {
         }
 
         important("Client ID: " + clientId);
-        socket = new Spider(PORT).createSocket(HOST);
+
+        try {
+            user = new User(clientId);
+        } catch (EulaException e) {
+            important("Failed to Gen User Account : " + clientId);
+            exit(1);
+        }
+
+        Spider spider = new Spider(PORT);
+        socket = spider.createSocket(HOST);
 
         try (PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
              BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -45,7 +60,7 @@ public class CharonClient {
 
             joinTime = System.currentTimeMillis();
 
-            out.println(clientId);
+            out.println(user.toJson()); //　ユーザー情報を送信
 
             new Thread(() -> {
                 try {
@@ -65,7 +80,7 @@ public class CharonClient {
                         }
                         if (fromServer.equals(KICKED_OUT) || fromServer.equals(SERVER_SHUTDOWN)) {
                             important(DISCONNECTED);
-                            System.exit(1);
+                            exit(1);
                         }
                     }
                 } catch (IOException e) {

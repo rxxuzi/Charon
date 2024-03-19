@@ -1,10 +1,11 @@
 package server;
 
 import data.Chat;
-import opium.Opium;
-import opium.Opioid;
+import data.User;
 import global.Fast;
 import net.Spider;
+import opium.Opioid;
+import opium.Opium;
 import opium.OpiumException;
 
 import java.io.*;
@@ -29,11 +30,14 @@ public class CharonServer {
     public static final Map<String, Boolean> muteMap = new ConcurrentHashMap<>();
     // クライアントの権限レベルを保持するマップ
     public static final Map<String, Integer> permissionMap = new ConcurrentHashMap<>();
+    //　ユーザーマップ
+    public static final Map<String, User> idMap = new ConcurrentHashMap<>();
 
     public static final long serverStartTime = System.currentTimeMillis();
 
     public static ServerSocket svrSocket;
 
+    public static final List<User> userList = new ArrayList<>();
     public static final List<String> msgList = new ArrayList<>(); // メッセージの履歴
     public static final List<String> cmdList = new ArrayList<>(); // コマンド履歴
     public static final List<String> muteMsgList = new ArrayList<>(); //　ミュートされているメッセージの履歴
@@ -55,7 +59,8 @@ public class CharonServer {
             }
         }).start();
 
-        svrSocket = new Spider(PORT).createLocalhostServerSocket();
+        Spider spider = new Spider(PORT);
+        svrSocket = spider.createLocalhostServerSocket();
 
         try {
             while (isRunning) {
@@ -84,7 +89,9 @@ public class CharonServer {
         private PrintWriter out;
         private BufferedReader in;
         private OutputStream os;
-        private String clientId;
+        private String name;
+        private String id;
+        private User user;
 
         public ClientHandler(Socket socket) {
             this.clientSocket = socket;
@@ -96,14 +103,19 @@ public class CharonServer {
                 in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
                 os = clientSocket.getOutputStream();
 
-                clientId = in.readLine();
+                user = User.json2User(in.readLine());
+                name = user.name;
+                id = user.id;
 
-                clientMap.put(clientId, out); // メッセージ用のストリーム
-                streamMap.put(clientId, os);  // ファイル送信用のストリーム
+                idMap.put(id, user);
+                userList.add(user);
 
-                permissionMap.put(clientId, 1);
+                clientMap.put(name, out); // メッセージ用のストリーム
+                streamMap.put(name, os);  // ファイル送信用のストリーム
 
-                success("Client ID: " + clientId + " has connected.");
+                permissionMap.put(name, 1);
+
+                success("Client : " + name + " has connected." + " ID : " + user.id);
 
                 String line;
                 MessageProcessor processor = new MessageProcessor(); // MessageProcessor のインスタンスを作成
@@ -115,13 +127,13 @@ public class CharonServer {
 
                     if(type.equals(Fast.st[0])){
                         // !t:  テキスト
-                        Boolean isMuted = CharonServer.muteMap.getOrDefault(clientId, false);
+                        Boolean isMuted = CharonServer.muteMap.getOrDefault(name, false);
                         if (!isMuted) {
                             // 通常のテキストメッセージの処理
-                            notice(clientId + ": " + line);
-                            msgList.add(clientId + ": " + line);
+                            notice(name + ": " + line);
+                            msgList.add(name + ": " + line);
                         } else {
-                            muteMsgList.add(clientId + ": " + line);
+                            muteMsgList.add(name + ": " + line);
                         }
                     } else if (type.equals(Fast.st[1])){
                         // !c:  コマンド
@@ -144,13 +156,16 @@ public class CharonServer {
                         } catch (OpiumException e) {
                             throw new RuntimeException(e);
                         }
+                    } else if(type.equals(Fast.st[5])) {
+                        // !u : User
+                        user = User.json2User(line);
                     }
                 }
                 // readLine() が null を返した場合、クライアントが接続を閉じたことを示す
-                info("Client " + clientId + " disconnected.");
+                info("Client " + name + " disconnected.");
             } catch (IOException e) {
                 if (isRunning) {
-                    info("Exception in ClientHandler for client " + clientId + ": " + e.getMessage());
+                    info("Exception in ClientHandler for client " + name + ": " + e.getMessage());
                 }
             } finally {
                 try {
@@ -160,9 +175,10 @@ public class CharonServer {
                 } catch (IOException ignored) {}
 
                 //　それぞれのMapからクライアントを削除する
-                clientMap.remove(clientId);
-                streamMap.remove(clientId);
-                permissionMap.remove(clientId);
+                clientMap.remove(name);
+                streamMap.remove(name);
+                permissionMap.remove(name);
+                userList.remove(user);
             }
         }
 

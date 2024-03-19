@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 
 public class Spider {
-    private final int port;
+    public final int port;
 
     public Spider(int port) {
         this.port = port;
