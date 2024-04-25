@@ -24,7 +24,7 @@ import static client.CltMessages.*;
 import static java.lang.System.exit;
 
 public class CharonClient {
-    private static final String HOST = "localhost";
+    private static String HOST = "localhost";
     private static final int PORT = 12345;
 
     public static int level = 1;
@@ -34,12 +34,17 @@ public class CharonClient {
     public static final List<String> cltNotes = new ArrayList<>();
     private static final Gson gson = new Gson();
     private static User user;
-    public static void main(String[] args) throws IOException, EulaException {
+    public static void main(String[] args) throws IOException {
         clientId = UUID.randomUUID().toString();
         Scanner sc = new Scanner(System.in);
         System.out.print("Enter client ID : ");
         if (sc.hasNextLine()) {
             clientId = sc.nextLine();
+        }
+
+        System.out.print("Enter IP Address : ");
+        if (sc.hasNextLine()) {
+            HOST = sc.nextLine();
         }
 
         important("Client ID: " + clientId);

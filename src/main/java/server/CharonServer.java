@@ -60,7 +60,8 @@ public class CharonServer {
         }).start();
 
         Spider spider = new Spider(PORT);
-        svrSocket = spider.createLocalhostServerSocket();
+        svrSocket = spider.createLinkLocalServerSocket();
+        important(svrSocket.getLocalSocketAddress());
 
         try {
             while (isRunning) {
